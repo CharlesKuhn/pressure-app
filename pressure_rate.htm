@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Pressão</title>
+<style>
+  body { font-family: Arial, sans-serif; text-align: center; padding: 20px; margin: 0; }
+  h1 { color: #333; font-size: 1.8em; margin-bottom: 20px; }
+  input, button, select { font-size: 1.2em; margin: 10px; padding: 12px 20px; border-radius: 8px; border: 1px solid #ccc; }
+  button { background: #0077cc; color: white; border: none; cursor: pointer; }
+  button:hover { background: #005fa3; }
+  #pressao { font-size: 4em; margin: 30px 0 15px 0; color: #0077cc; font-weight: bold; }
+  #tempo { font-size: 2em; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>Controle de Pressão</h1>
+
+<label>Modo: 
+  <select id="modo">
+    <option value="pressurizacao">Pressurização</option>
+    <option value="despressurizacao">Despressurização</option>
+  </select>
+</label><br>
+
+<label id="labelPressaoInicial" style="display:none;">
+  Pressão inicial (bar):<br>
+  <input type="number" id="pressaoInicial" step="1" value="0">
+</label><br>
+
+<label>Taxa (bar/min):<br>
+  <input type="number" id="taxa" step="1">
+</label><br>
+
+<button onclick="start()">Start</button>
+<button onclick="pause()">Pause</button>
+<button onclick="reset()">Reset</button>
+
+<div id="pressao">0 bar</div>
+<div id="tempo">Tempo: 0.0 s</div>
+
+<script>
+let taxa = 0, startTime, interval, paused = false, elapsed = 0;
+let modo = 'pressurizacao';
+let pressaoInicial = 0;
+
+const modoSelect = document.getElementById('modo');
+const labelPressaoInicial = document.getElementById('labelPressaoInicial');
+
+modoSelect.addEventListener('change', () => {
+  modo = modoSelect.value;
+  // Mostrar campo de pressão inicial apenas no modo despressurização
+  if (modo === 'despressurizacao') {
+    labelPressaoInicial.style.display = 'inline-block';
+  } else {
+    labelPressaoInicial.style.display = 'none';
+  }
+});
+
+function start() {
+  taxa = parseFloat(document.getElementById("taxa").value);
+  if (isNaN(taxa) || taxa <= 0) {
+    alert("Digite uma taxa válida em bar/min.");
+    return;
+  }
+
+  if (modo === 'despressurizacao') {
+    pressaoInicial = parseFloat(document.getElementById("pressaoInicial").value);
+    if (isNaN(pressaoInicial) || pressaoInicial < 0) {
+      alert("Digite uma pressão inicial válida.");
+      return;
+    }
+  }
+
+  if (paused) {
+    startTime = Date.now() - elapsed;
+    paused = false;
+  } else {
+    startTime = Date.now();
+    elapsed = 0;
+  }
+  clearInterval(interval);
+  interval = setInterval(update, 100); // atualiza a cada 0,1s
+}
+
+function pause() {
+  if (!paused) {
+    clearInterval(interval);
+    paused = true;
+  }
+}
+
+function reset() {
+  clearInterval(interval);
+  paused = false;
+  elapsed = 0;
+  document.getElementById("pressao").innerText = (modo === 'despressurizacao' ? pressaoInicial : 0) + " bar";
+  document.getElementById("tempo").innerText = "Tempo: 0.0 s";
+}
+
+function update() {
+  elapsed = Date.now() - startTime;
+  let t_s = (elapsed / 1000).toFixed(1); // tempo em décimos de segundo
+  let taxa_bar_s = taxa / 60; // taxa em bar/s
+
+  let P;
+  if (modo === 'pressurizacao') {
+    P = Math.floor(taxa_bar_s * t_s);
+  } else { // despressurização
+    P = Math.floor(pressaoInicial - taxa_bar_s * t_s);
+    if (P < 0) P = 0; // não deixa negativa
+  }
+
+  document.getElementById("pressao").innerText = P + " bar";
+  document.getElementById("tempo").innerText = "Tempo: " + t_s + " s";
+}
+</script>
+</body>
+</html>
